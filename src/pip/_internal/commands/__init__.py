@@ -40,6 +40,10 @@ commands_dict = OrderedDict([
         'pip._internal.commands.download', 'DownloadCommand',
         'Download packages.',
     )),
+    ('find', CommandInfo(
+        'pip._internal.commands.find', 'FindCommand',
+        'Find package versions with a specifier.',
+    )),
     ('uninstall', CommandInfo(
         'pip._internal.commands.uninstall', 'UninstallCommand',
         'Uninstall packages.',
