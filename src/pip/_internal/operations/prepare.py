@@ -441,7 +441,6 @@ class RequirementPreparer(object):
     def prepare_linked_requirement(self, req, parallel_builds=False):
         # type: (InstallRequirement, bool) -> AbstractDistribution
         """Prepare a requirement to be obtained from req.link."""
-        # TODO: Breakup into smaller functions
         assert req.link
         link = req.link
         self._log_preparing_link(req, link)
@@ -468,21 +467,18 @@ class RequirementPreparer(object):
                     req.local_file_path = local_file.path
 
             abstract_dist = _get_prepared_distribution(
-                req, self.req_tracker, self.finder, self.build_isolation,
-            )
+                req, self.req_tracker, self.finder, self.build_isolation)
 
             if download_dir:
                 if link.is_existing_dir():
                     logger.info('Link is a directory, ignoring download_dir')
                 elif local_file:
                     download_location = os.path.join(
-                        download_dir, link.filename
-                    )
+                        download_dir, link.filename)
                     if not os.path.exists(download_location):
                         shutil.copy(local_file.path, download_location)
-                        logger.info(
-                            'Saved %s', display_path(download_location)
-                        )
+                        download_path = display_path(download_location)
+                        logger.info('Saved {}'.format(download_path))
 
             if self._download_should_save:
                 # Make a .zip of the source_dir we already created.
