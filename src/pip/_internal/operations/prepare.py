@@ -412,6 +412,32 @@ class RequirementPreparer(object):
                 "being responsible and not assuming it can delete this. "
                 "Please delete it and try again.".format(req, req.source_dir))
 
+    def _get_linked_req_hashes(self, req):
+        # type: (InstallRequirement) -> Hashes
+        """Return hashes for the given linked install requirement."""
+        if not self.require_hashes:
+            return req.hashes(trust_internet=True)
+        # We could check these first 2 conditions inside unpack_url
+        # and save repetition of conditions, but then we would
+        # report less-useful error messages for unhashable
+        # requirements, complaining that there's no hash provided.
+        if req.link.is_vcs:
+            raise VcsHashUnsupported()
+        elif req.link.is_existing_dir():
+            raise DirectoryUrlHashUnsupported()
+        if req.original_link is None and not req.is_pinned:
+            # Unpinned packages are asking for trouble when a new
+            # version is uploaded.  This isn't a security check, but
+            # it saves users a surprising hash mismatch in the future.
+            # file:/// URLs aren't pinnable, so don't complain about
+            # them not being pinned.
+            raise HashUnpinned()
+        # If known-good hashes are missing for this requirement,
+        # shim it with a facade object that will provoke hash
+        # computation and then raise a HashMissing exception
+        # showing the user what the hash should be.
+        return req.hashes(trust_internet=False) or MissingHashes()
+
     def prepare_linked_requirement(self, req, parallel_builds=False):
         # type: (InstallRequirement, bool) -> AbstractDistribution
         """Prepare a requirement to be obtained from req.link."""
@@ -427,58 +453,19 @@ class RequirementPreparer(object):
 
         with indent_log():
             self._ensure_link_req_src_dir(req, download_dir, parallel_builds)
-            # Now that we have the real link, we can tell what kind of
-            # requirements we have and raise some more informative errors
-            # than otherwise. (For example, we can raise VcsHashUnsupported
-            # for a VCS URL rather than HashMissing.)
-            if self.require_hashes:
-                # We could check these first 2 conditions inside
-                # unpack_url and save repetition of conditions, but then
-                # we would report less-useful error messages for
-                # unhashable requirements, complaining that there's no
-                # hash provided.
-                if link.is_vcs:
-                    raise VcsHashUnsupported()
-                elif link.is_existing_dir():
-                    raise DirectoryUrlHashUnsupported()
-                if not req.original_link and not req.is_pinned:
-                    # Unpinned packages are asking for trouble when a new
-                    # version is uploaded. This isn't a security check, but
-                    # it saves users a surprising hash mismatch in the
-                    # future.
-                    #
-                    # file:/// URLs aren't pinnable, so don't complain
-                    # about them not being pinned.
-                    raise HashUnpinned()
-
-            hashes = req.hashes(trust_internet=not self.require_hashes)
-            if self.require_hashes and not hashes:
-                # Known-good hashes are missing for this requirement, so
-                # shim it with a facade object that will provoke hash
-                # computation and then raise a HashMissing exception
-                # showing the user what the hash should be.
-                hashes = MissingHashes()
-
             try:
                 local_file = unpack_url(
                     link, req.source_dir, self.downloader, download_dir,
-                    hashes=hashes,
-                )
+                    hashes=self._get_linked_req_hashes(req))
             except requests.HTTPError as exc:
-                logger.critical(
-                    'Could not install requirement %s because of error %s',
-                    req,
-                    exc,
-                )
                 raise InstallationError(
                     'Could not install requirement {} because of HTTP '
-                    'error {} for URL {}'.format(req, exc, link)
-                )
-
-            # For use in later processing, preserve the file path on the
-            # requirement.
-            if local_file:
-                req.local_file_path = local_file.path
+                    'error {} for URL {}'.format(req, exc, link))
+            else:
+                # For use in later processing,
+                # preserve the file path on the requirement.
+                if local_file is not None:
+                    req.local_file_path = local_file.path
 
             abstract_dist = _get_prepared_distribution(
                 req, self.req_tracker, self.finder, self.build_isolation,
