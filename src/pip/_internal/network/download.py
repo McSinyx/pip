@@ -200,6 +200,6 @@ class Downloader(object):
     def download_file(self, link, tmpdir, hashes):
         # type: (Link, str, Optional[Hashes]) -> Tuple[str, str]
         """Download link url into temp_dir using provided session."""
-        if link.is_wheel and hashes is None:
+        if link.is_wheel:  # and hashes is None:
             return self._download_partial(link, tmpdir)
         return self._download_all(link, tmpdir, hashes)

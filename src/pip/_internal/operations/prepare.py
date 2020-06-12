@@ -39,9 +39,7 @@ from pip._internal.utils.unpacking import unpack_file
 from pip._internal.vcs import vcs
 
 if MYPY_CHECK_RUNNING:
-    from typing import (
-        Callable, List, Optional,
-    )
+    from typing import Callable, List, Optional
 
     from mypy_extensions import TypedDict
 
