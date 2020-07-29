@@ -576,30 +576,41 @@ def decide_user_install(
     is also asserted in this function.
     """
     # Check for incompatible options
-    locations = {"--target": target_dir is not None, "--user": use_user_site,
-                 "--prefix": prefix_path is not None}
+    locations = {
+        "--target": target_dir is not None,
+        "--user": use_user_site,
+        "--prefix": prefix_path is not None,
+    }
     destinations = [k for k, v in locations.items() if v]
     if len(destinations) > 1:
         last, rest = destinations[-1], ", ".join(destinations[:-1])
-        raise CommandError("Different installation locations are implied by "
-                           "{} and {}.".format(rest, last))
+        raise CommandError(
+            "Different installation locations are implied by "
+            "{} and {}.".format(rest, last)
+        )
 
     if target_dir:
         if root_path is not None:
             target_dir = change_root(root_path, target_dir)
         if os.path.exists(target_dir) and not os.path.isdir(target_dir):
-            raise InstallationError("Target path exists but is not "
-                                    "a directory: {}".format(target_dir))
+            raise InstallationError(
+                "Target path exists but is not a directory: "
+                "{}".format(target_dir)
+            )
         if not test_writable_dir(target_dir):
             raise InstallationError(
-                "Cannot write to target directory: {}".format(target_dir))
+                "Cannot write to target directory: {}".format(target_dir)
+            )
         logger.debug("Non-user install due to specified target directory")
         return False
+
     if prefix_path:
-        if not site_packages_writable(root=root_path, isolated=isolated_mode,
-                                      prefix=prefix_path):
+        if not site_packages_writable(
+            root=root_path, isolated=isolated_mode, prefix=prefix_path
+        ):
             raise InstallationError(
-                "Cannot write to prefix path: {}".format(prefix_path))
+                "Cannot write to prefix path: {}".format(prefix_path)
+            )
         logger.debug("Non-user install due to specified prefix path")
         return False
 
@@ -617,36 +628,47 @@ def decide_user_install(
         else:
             logger.debug("Non-user install by explicit request")
         if use_user_site and ENABLE_USER_SITE is None:
-            raise InstallationError("User site-packages are disabled for "
-                                    "security reasons or by an administrator.")
+            raise InstallationError(
+                "User site-packages are disabled for security reasons or by "
+                "an administrator."
+            )
     elif ENABLE_USER_SITE is None:
-        logger.debug("Non-user install since user site-packages are disabled "
-                     "for security reasons or by an administrator.")
+        logger.debug(
+            "Non-user install since user site-packages are disabled for "
+            "security reasons or by an administrator."
+        )
         use_user_site = False
     elif ENABLE_USER_SITE is False:
-        logger.debug("Non-user install since user site-packages are disabled "
-                     "by user request (with 'python -s' or PYTHONNOUSERSITE)")
+        logger.debug(
+            "Non-user install since user site-packages are disabled by user "
+            "request (with 'python -s' or PYTHONNOUSERSITE)"
+        )
         use_user_site = False
     elif root_path:
         logger.debug(
-            "Non-user install since alternate root directory is specified")
+            "Non-user install since alternate root directory is specified"
+        )
         use_user_site = False
     elif site_packages_writable(root=root_path, isolated=isolated_mode):
         logger.debug("Non-user install because site-packages writeable")
         return False
     else:
-        logger.info("Defaulting to user installation because "
-                    "normal site-packages is not writeable")
+        logger.info(
+            "Defaulting to user installation because normal site-packages is "
+            "not writeable"
+        )
         use_user_site = True
 
     assert isinstance(use_user_site, bool)
     if use_user_site:
         if virtualenv_no_global():
             raise InstallationError(
-                "Can not perform a '--user' install. "
-                "User site-packages are not visible in this virtualenv.")
-        if not site_packages_writable(user=use_user_site, root=root_path,
-                                      isolated=isolated_mode):
+                "Can not perform a '--user' install. User site-packages are "
+                "not visible in this virtualenv."
+            )
+        if not site_packages_writable(
+            user=use_user_site, root=root_path, isolated=isolated_mode
+        ):
             raise InstallationError("Cannot write to user site-packages.")
     elif not site_packages_writable(root=root_path, isolated=isolated_mode):
         raise InstallationError("Cannot write to global site-packages.")
